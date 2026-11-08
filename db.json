@@ -1,0 +1,12 @@
+{
+  "kpis": {
+    "total_responses": 5561,
+    "active_surveys": 2,
+    "avg_satisfaction": 4.2
+  },
+  "insights_ia": [
+    { "topic": "Descansos", "percentage": 45 },
+    { "topic": "Comunicació", "percentage": 32 }
+  ],
+  "bias_alert": "⚠️ Baixa participació al torn de nit."
+}

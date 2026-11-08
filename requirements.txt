@@ -1,0 +1,17 @@
+# Framework Web i Servidor ASGI
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+
+# Validació de dades i configuració
+pydantic>=2.9.0
+pydantic-settings>=2.5.0
+
+# Intel·ligència Artificial (LLM per anàlisi de sentiment i insights)
+openai>=1.54.0
+
+# Base de Dades Núvol (Turso / LibSQL SQLite)
+libsql-client>=0.3.1
+
+# Variables d'entorn i utilitats
+python-dotenv>=1.0.1
+requests>=2.32.0
