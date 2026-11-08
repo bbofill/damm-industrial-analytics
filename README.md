@@ -1,76 +1,42 @@
-# 🏭 Cloud-Edge Industrial Telemetry & Privacy-Preserving Analytics Platform (`DammIÀ`)
+# Cloud-Edge Industrial Telemetry & Privacy-Preserving Analytics Platform (DammIÀ)
 
-> **Full-Stack Distributed Architecture · Zero-Trust Security · Statistical $k$-Anonymity · Multi-LLM RAG with Deterministic Offline Fallback**  
+> **Full-Stack Distributed Architecture · Zero-Trust Security · Statistical k-Anonymity · Multi-LLM RAG with Deterministic Offline Fallback**  
 > *Developed for the Damm Industrial Challenge at UAB THE HACK! 2026*
-
-![Status](https://img.shields.io/badge/System_Status-Production_Ready-10B981?style=for-the-badge)
-![Architecture](https://img.shields.io/badge/Architecture-Cloud--Edge_Hybrid-0284C7?style=for-the-badge)
-![Security](https://img.shields.io/badge/Security-Zero--Trust_%7C_k--Anonymity_%E2%89%A5_5-C8102E?style=for-the-badge)
-![Backend](https://img.shields.io/badge/Backend-FastAPI_%7C_Python_3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Frontend](https://img.shields.io/badge/Frontend-React_18_%7C_TypeScript_%7C_Vite-61DAFB?style=for-the-badge&logo=react&logoColor=black)
-![Database](https://img.shields.io/badge/Database-Turso_libSQL_%7C_SQLite_ACID-4F46E5?style=for-the-badge)
-![AI](https://img.shields.io/badge/AI_Orchestration-Gemini_2.5_%7C_GPT--4o_%7C_Local_Engine-F59E0B?style=for-the-badge)
 
 ---
 
-## 📌 Executive Summary & Engineering Scope
+## Executive Summary & Engineering Scope
 
-Built under a strict 24-hour hackathon constraint for **Grup Damm**, this project goes far beyond a conventional web application. It is a **complete, end-to-end industrial software ecosystem** engineered to solve a critical operational problem: capturing real-time operational telemetry and workforce climate data across heterogeneous industrial environments (packaging lines, logistics hubs at ZAL, maintenance crews, and corporate offices) where most operators lack corporate credentials or workstation access.
+Built under a strict 24-hour hackathon constraint for **Grup Damm**, this project goes beyond a conventional web application. It is a **complete, end-to-end industrial software ecosystem** engineered to solve a critical operational problem: capturing real-time operational telemetry and workforce climate data across heterogeneous industrial environments (packaging lines, logistics hubs at ZAL, maintenance crews, and corporate offices) where most operators lack corporate credentials or workstation access.
 
 From an engineering standpoint, the platform was architected from first principles focusing on **four core pillars**:
-1. **Cryptographic & Mathematical Privacy by Design:** Enforcing one-person-one-vote integrity without storing user identities, IP addresses, or session footprints, backed by statistical $k$-anonymity ($k \ge 5$).
+1. **Cryptographic & Mathematical Privacy by Design:** Enforcing one-person-one-vote integrity without storing user identities, IP addresses, or session footprints, backed by statistical k-anonymity ($k \ge 5$).
 2. **Cloud-Edge Database High Availability (HA):** Operating on a distributed cloud database (**Turso libSQL**) with automated, zero-downtime failover to a local **SQLite** engine when factory WAN connectivity drops.
 3. **Fault-Tolerant AI Orchestration:** Combining cloud LLMs (**Google Gemini 2.5 Flash** & **OpenAI GPT-4o-mini**) with strict SQL *Data Grounding* and a **100% offline deterministic semantic fallback engine** to prevent service degradation during API outages.
 4. **Zero-Setup DevOps & Self-Healing Infrastructure:** Automated relational schema auditing, atomic hot-backups, and third-party webhook integrations (Microsoft Teams Adaptive Cards & Microsoft Entra ID SSO).
 
 ---
 
-## 🏗️ High-Level System Architecture
+## System Architecture & Data Flow
 
-```text
-+-----------------------------------------------------------------------------------+
-|                        CLIENT LAYER (Phygital & Omnichannel)                      |
-|                                                                                   |
-|  [Factory Floor QR Totems]        [Mobile 4G / Industrial Wi-Fi]    [M365 / Teams]|
-|  (Packaging, ZAL, Maintenance)     (i18n CA/ES · WCAG AA UI)        (Office Staff)|
-+-----------------+-------------------------------+-------------------------+-------+
-                  |                               |                         |
-                  v                               v                         v
-+-----------------------------------------------------------------------------------+
-|                     SECURITY & ZERO-TRUST GATEWAY (verificacio.py)                |
-|                                                                                   |
-|  1. Contextual Auth Router  --> CIDR Subnet Gating (10.20.0.0/16) vs Entra ID SSO |
-|  2. Ephemeral Token Issuer  --> CSPRNG (secrets.token_urlsafe(32)) + Mutex Lock   |
-|  3. Atomic Token Consumer   --> One-Time-Use Destruction (Anti-Replay Protection) |
-+-------------------------------------------------+---------------------------------+
-                                                  |
-                                                  v
-+-----------------------------------------------------------------------------------+
-|                        APPLICATION CORE (FastAPI / api.py)                        |
-|                                                                                   |
-|  +-----------------------------+               +-------------------------------+  |
-|  | Privacy & Ingestion Pipeline|               | Analytics & Aggregation Engine|  |
-|  | - Zero-Log Request Stripping|               | - Statistical k-Anonymity (>=5)| |
-|  | - In-Memory Regex PII Mask  |               | - Real-Time KPI & eNPS Calc   |  |
-|  +--------------+--------------+               +---------------+---------------+  |
-+-----------------|----------------------------------------------|------------------+
-                  |                                              |
-                  v                                              v
-+---------------------------------------+      +------------------------------------+
-|   HYBRID PERSISTENCE LAYER (db.py)    |      |   AI ORCHESTRATION (ai_service.py) |
-|                                       |      |                                    |
-|  [Primary: Turso libSQL Cloud (HTTP)] |      |  [SQL Context Grounding Injector]  |
-|                  |                    |      |                  |                 |
-|        (Auto-Failover Router)         |      |    +-------------+-------------+   |
-|                  v                    |      |    |             |             |   |
-|  [Fallback: Local SQLite ACID Engine] |      | [Gemini 2.5] [GPT-4o-mini] [Local] |
-|  + Atomic Hot-Backups (backup_db.py)  |      |                            Rule Eng|
-+---------------------------------------+      +------------------------------------+
-```
+The system is structured into four decoupled layers to guarantee isolation between identity verification and data persistence:
+
+1. **Client Ingestion Layer (Phygital & Omnichannel):**
+   * **Factory Floor Totems & Mobile Clients:** Dynamic QR endpoints serving an ultra-lightweight React/Vite bundle (`< 1s` load over degraded 4G/industrial Wi-Fi) with instant state-driven internationalization (`CA` | `ES`) and WCAG AA high-contrast UI.
+   * **Corporate Office Clients:** Direct integration with Microsoft 365 SSO and interactive Adaptive Cards delivered via Microsoft Teams webhooks.
+2. **Zero-Trust Security Gateway (`backend/verificacio.py`):**
+   * Acts as a stateless verification barrier. It validates network origin via CIDR subnet matching (`10.20.0.0/16`) for plant devices or Entra ID tokens for office staff.
+   * Issues ephemeral, 256-bit cryptographically secure tokens in volatile RAM protected by thread mutex locks (`threading.Lock`), completely unlinked from the user's network metadata.
+3. **Application & Privacy Core (`backend/api.py`):**
+   * Consumes and destroys one-time tokens atomically upon submission to prevent replay attacks.
+   * Strips all HTTP headers/IPs, executes in-memory regular expression scrubbing to mask PII in free-text fields, and enforces statistical k-anonymity ($k \ge 5$) on all outgoing analytical queries.
+4. **Hybrid Persistence & AI Layer (`backend/db.py` & `backend/ai_service.py`):**
+   * Routes read/write operations to **Turso (libSQL Cloud)** over HTTP, automatically failing over to a local **SQLite** database (`damm_listen_final.db`) if external network connectivity fails.
+   * Feeds aggregated SQL metrics into the AI orchestration layer (Gemini 2.5 / GPT-4o-mini) or falls back to a local rule-based analytical parser when running offline.
 
 ---
 
-## 🛠️ Comprehensive Technology Stack & Tooling
+## Comprehensive Technology Stack & Tooling
 
 ### 1. Backend & Systems Engineering (`Python 3.10+`)
 * **FastAPI & Uvicorn (ASGI):** High-throughput asynchronous REST API handling concurrent requests from factory terminals and administrative dashboards.
@@ -79,14 +45,14 @@ From an engineering standpoint, the platform was architected from first principl
 * **Cryptographic Primitives (`secrets`, `ipaddress`):** OS-level CSPRNG entropy generation and CIDR bitmask subnet verification.
 
 ### 2. Hybrid Cloud-Edge Data Engineering (`SQL / libSQL`)
-* **Turso (libSQL Cloud):** Distributed edge database queried over a custom HTTP pipeline (`db.py`) for sub-millisecond read/write operations across multiple industrial plants.
+* **Turso (libSQL Cloud):** Distributed edge database queried over a custom HTTP pipeline (`db.py`) for low-latency read/write operations across multiple industrial plants.
 * **SQLite3 (Local Edge Fallback):** Embedded relational engine (`damm_listen_final.db`) acting as an immediate local failover replica and offline persistence store.
 * **Self-Healing Schema Management (`init_schema`):** Zero-setup initialization routine that audits relational integrity on boot and provisions tables (`segments`, `surveys`, `questions`, `options`, `responses`, `settings`) idempotently.
 * **ACID Hot-Backup Pipeline (`scripts/backup_db.py`):** Automated snapshot utility generating timestamped local and cloud state backups (`backups/`) without locking active read/write transactions.
 
 ### 3. Frontend & Industrial UX Engineering (`TypeScript / React 18`)
-* **React 18 + TypeScript + Vite:** Strictly typed component architecture bundled with Vite for near-instantaneous HMR and optimized production builds (`dist/`) under `< 1s` load time on degraded 4G/industrial Wi-Fi.
-* **Tailwind CSS + PostCSS:** Custom design system implementing official corporate tokens (`#C8102E`), high-contrast WCAG AA typography for brightly lit factory floors, and oversized touch targets for gloved operators.
+* **React 18 + TypeScript + Vite:** Strictly typed component architecture bundled with Vite for near-instantaneous HMR and optimized production builds (`dist/`).
+* **Tailwind CSS + PostCSS:** Custom design system implementing corporate color tokens (`#C8102E`), high-contrast WCAG AA typography for brightly lit factory floors, and oversized touch targets for gloved operators.
 * **Native Internationalization (i18n):** Instantaneous state-driven language switching (`CA` | `ES`) across the entire employee ingestion flow without page reloads.
 * **Executive PDF Reporting Engine:** Client-side document compilation generating print-ready executive summaries and AI action plans for Board & Safety Committees.
 
@@ -97,7 +63,7 @@ From an engineering standpoint, the platform was architected from first principl
 
 ---
 
-## 🔐 Deep Dive: Cybersecurity, Access Control & Privacy Engineering
+## Deep Dive: Cybersecurity, Access Control & Privacy Engineering
 
 In an industrial labor environment, employees will not report safety hazards, thermal stress, or management friction if they suspect their identity can be traced. Rather than relying on legal disclaimers, **privacy is enforced mathematically and cryptographically in code**.
 
@@ -105,10 +71,10 @@ In an industrial labor environment, employees will not report safety hazards, th
 Each deployment channel is bound to a specific cryptographic QR identifier (`qr-planta-prat`, `qr-logistica-zal`, `qr-comercials`, `qr-oficines`, `qr-managers`, `qr-demo-hackathon`). When a device scans a QR code, `/api/verificar/metode/{token}` inspects the security policy assigned to that segment:
 * **Industrial Network Gating (IP Subnet Verification):** For factory floor QR codes, `/api/verificar/xarxa` extracts the client's network origin (supporting reverse-proxy `X-Forwarded-For` headers) and validates it against authorized industrial CIDR blocks (`PLANT_NETWORKS=10.20.0.0/16`) using Python's `ipaddress.ip_network` module. External requests are rejected at the gateway.
 * **Corporate Identity Federation (Microsoft 365 / Entra ID SSO):** For office and management segments (`/api/verificar/m365`), the system validates corporate domain ownership and directory membership before issuing an access token, decoupling the authentication step from the subsequent voting payload.
-* **Universal Demo Bypass (`DEMO_MODE`):** Controlled environment flag allowing hackathon judges and external reviewers to test the full mobile flow via `qr-demo-hackathon` from any public network without compromising production rules.
+* **Universal Demo Bypass (`DEMO_MODE`):** Controlled environment flag allowing external reviewers to test the full mobile flow via `qr-demo-hackathon` from any public network without compromising production rules.
 
 ### 2. Ephemeral One-Time Cryptographic Tokens (Anti-Replay & Ballot Stuffing)
-Once a user passes network or SSO verification, how do we prevent them from submitting 500 automated responses via `curl` while keeping their vote anonymous?
+Once a user passes network or SSO verification, the system prevents automated ballot stuffing while keeping the vote anonymous through a three-step lifecycle:
 1. **High-Entropy Generation:** The server generates a 256-bit cryptographically secure random token via `secrets.token_urlsafe(32)`.
 2. **Thread-Safe In-Memory State:** The token is stored exclusively in volatile RAM (`_tokens_actius`) protected by a mutex lock (`threading.Lock()`), mapped only to the target `segment_id` and a strict Time-To-Live (`TTL_SEGONS = 3600`). **No user email or IP is attached to the token.**
 3. **Atomic Destruction (`consumir_token`):** When the user submits their survey to `POST /api/respondre`, the backend acquires the mutex lock, verifies the token's existence and TTL, and **deletes it from memory in a single atomic operation** before writing the survey answers. Any subsequent replay attempt returns `403 Forbidden`.
@@ -128,21 +94,21 @@ CREATE TABLE responses (
 There are **no columns** for `user_id`, `ip_address`, `session_id`, `mac_address`, or `user_agent`. Even in the event of a full database compromise, correlating a response back to an individual employee is impossible.
 
 ### 4. In-Memory Regex PII Sanitization (`netejar_pii`)
-Employees frequently include identifying details in open-text fields inadvertently (e.g., *"Call me at 612345678"* or *"juan.perez@damm.com"*). Before any SQL `INSERT` is executed, the payload passes through an in-memory regular expression scrubber:
-* **Email Pattern Matching:** `[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}` $\rightarrow$ Replaced with `[CORREU PROTEGIT]`.
-* **Phone Pattern Matching:** `\b(?:\+34|0034)?[\s.-]?[6789]\d{2}[\s.-]?\d{3}[\s.-]?\d{3}\b` $\rightarrow$ Replaced with `[TELÈFON PROTEGIT]`.
+Employees frequently include identifying details in open-text fields inadvertently. Before any SQL `INSERT` is executed, the payload passes through an in-memory regular expression scrubber:
+* **Email Pattern Matching:** `[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}` -> Replaced with `[CORREU PROTEGIT]`.
+* **Phone Pattern Matching:** `\b(?:\+34|0034)?[\s.-]?[6789]\d{2}[\s.-]?\d{3}[\s.-]?\d{3}\b` -> Replaced with `[TELÈFON PROTEGIT]`.
 Raw unmasked text never touches the disk.
 
-### 5. Statistical $k$-Anonymity Enforcement ($k \ge 5$)
-To prevent deductive re-identification (e.g., filtering a survey down to a micro-segment where only 2 people work on the night shift), the analytics engine enforces **$k$-anonymity ($k = 5$)** at the API level (`/api/surveys/{id}/detail`):
+### 5. Statistical k-Anonymity Enforcement ($k \ge 5$)
+To prevent deductive re-identification (e.g., filtering a survey down to a micro-segment where only 2 people work on the night shift), the analytics engine enforces **k-anonymity ($k = 5$)** at the API level (`/api/surveys/{id}/detail`):
 * If total responses for a query or segment satisfy $N < 5$, the backend suppresses granular score distributions, hides open-text comments, and returns `"protegit_anonimat": true`.
 * Data is only unlocked for HR visualization once the mathematical threshold of $N \ge 5$ independent submissions is reached.
 
 ---
 
-## 🧠 Deep Dive: Multi-LLM Architecture, Data Grounding & Offline Resilience
+## Deep Dive: Multi-LLM Architecture, Data Grounding & Offline Resilience
 
-Industrial software cannot suffer from LLM hallucinations or crash when an external cloud provider experiences downtime. The AI subsystem (`backend/ai_service.py` & `backend/api.py`) implements a three-tier defensive architecture:
+Industrial software cannot suffer from LLM hallucinations or crash when an external cloud provider experiences downtime. The AI subsystem (`backend/ai_service.py` & `backend/api.py`) implements a defensive architecture:
 
 ### 1. Dual Generative Workflows
 * **Context-Aware Survey Architect (`/api/ai/generar-enquesta`):** Transforms high-level natural language objectives from HR (e.g., *"Evaluate thermal stress and lumbar fatigue in the Prat packaging night shift"*) into structured JSON survey schemas containing calibrated 1–5 Likert scales, multiple-choice diagnostics, and open-text prompts designed to be completed in under 60 seconds.
@@ -152,51 +118,34 @@ Industrial software cannot suffer from LLM hallucinations or crash when an exter
 Before invoking any LLM, the backend executes real-time SQL aggregations across `surveys`, `questions`, and `responses`. It constructs a deterministic data snapshot containing:
 * Exact participation counts and segment ratios.
 * Calculated arithmetic means per question and global eNPS scores.
-* Sanitized, $k$-anonymity-verified employee comments.
+* Sanitized, k-anonymity-verified employee comments.
 
 This empirical snapshot is injected into the LLM system prompt under strict boundary instructions: **the model is forbidden from inventing metrics and must cite the injected SQL figures directly**.
 
 ### 3. Agnostic Multi-Model Routing & 100% Offline Deterministic Fallback
-```text
-[User / HR Prompt] 
-       │
-       ▼
-[SQL Context Grounding Builder] (Queries Turso / SQLite)
-       │
-       ▼
-[Provider Router] ──(Config: Gemini)──► Google Gemini 2.5 Flash API ──┐
-       │                                                              ├──► (If HTTP 200) ──► Return Response
-       └──(Config: OpenAI)──────────► OpenAI GPT-4o-mini API ─────────┘
-                                                                      │
-                                             (If Timeout / Quota / Offline Exception)
-                                                                      │
-                                                                      ▼
-                                           [Local Deterministic Semantic Engine]
-                                           (Rule-Based Keyword & SQL Statistical Parser)
-                                                                      │
-                                                                      ▼
-                                                   Guaranteed 100% Offline Response
-```
-If the factory loses external internet access, API keys expire, or rate limits (`HTTP 429`) are hit, `try/except` blocks capture the failure seamlessly and route execution to the **Local Deterministic Engine**. This engine parses user intent in Catalan/Spanish/English, computes live differentials directly from SQLite, and synthesizes a structured analytical report with **zero external network calls**.
+The AI layer is decoupled from any single vendor and designed for graceful degradation:
+* **Dynamic Provider Routing:** Administrators can switch in real time between **Google Gemini (`gemini-2.5-flash`)** and **OpenAI (`gpt-4o-mini`)** via the `/api/ai/config` endpoint without restarting the server.
+* **Graceful Degradation (Offline Fallback):** Every external API call is wrapped in fault-tolerant exception handlers. If the factory loses internet connectivity, API credentials are unconfigured, or rate limits (`HTTP 429`) are triggered, the system automatically routes the request to a **Local Deterministic Engine**.
+* **Local Rule-Based Execution:** This internal fallback parses query intent (shift comparisons, thermal anomalies, participation gaps, ZAL logistics issues), executes direct statistical calculations over the local SQLite database, and returns a formatted analytical response with zero external network dependencies.
 
 ### 4. Mandatory Human-in-the-Loop (HITL) Governance
 No AI-generated survey is ever deployed autonomously. Generated schemas are loaded into an interactive staging editor (`CreateSurvey.tsx`) where HR administrators can modify questions, adjust options, or discard items before committing the survey to production and generating QR codes.
 
 ---
 
-## 💾 Hybrid Cloud-Edge Persistence & DevOps Automation
+## Hybrid Cloud-Edge Persistence & DevOps Automation
 
 ### Custom Turso HTTP Pipeline + Transparent SQLite Failover (`backend/db.py`)
-Standard database drivers often struggle with connection pooling across serverless/edge environments or hang indefinitely when network interfaces drop. I engineered a custom database abstraction layer (`TursoConnection` & `TursoCursor`) that communicates with **Turso (libSQL)** over its native `/v2/pipeline` HTTP API while mimicking Python's standard `sqlite3` interface (`execute`, `fetchone`, `fetchall`, `lastrowid`):
+Standard database drivers often struggle with connection pooling across edge environments or hang when network interfaces drop. I engineered a custom database abstraction layer (`TursoConnection` & `TursoCursor`) that communicates with **Turso (libSQL)** over its native `/v2/pipeline` HTTP API while mimicking Python's standard `sqlite3` interface (`execute`, `fetchone`, `fetchall`, `lastrowid`):
 * **Automatic Type Marshalling:** Converts Python primitives (`int`, `float`, `None`, `str`) into Turso wire-format JSON payloads and reconstructs dictionary-accessible rows (`TursoRow`).
-* **Instantaneous Edge Failover:** Every database call is wrapped in a fault-tolerant router. If the Turso cloud cluster times out or returns a network error, `get_connection()` automatically switches the execution context to the local `damm_listen_final.db` SQLite file in `< 5ms`, ensuring factory floor totems never fail to record a vote.
+* **Instantaneous Edge Failover:** Every database call is wrapped in a fault-tolerant router. If the Turso cloud cluster times out or returns a network error, `get_connection()` automatically switches the execution context to the local `damm_listen_final.db` SQLite file, ensuring factory floor totems never fail to record a vote.
 
 ### Enterprise Webhook Integrations (`/api/integrations/teams/send`)
 To reach office staff without forcing them to open external portals, the backend includes a native **Microsoft Teams Webhook connector**. It constructs rich **Adaptive Cards (v1.4)** containing survey metadata, confidentiality badges, and direct action buttons (`Action.OpenUrl`), dispatching them directly to departmental Teams channels with automatic simulation fallback when webhook URLs are omitted.
 
 ---
 
-## 📂 Repository Architecture
+## Repository Structure
 
 ```text
 damm-industrial-analytics/
@@ -210,7 +159,7 @@ damm-industrial-analytics/
 │   ├── damm_backup_local...   # Automated point-in-time local SQLite ACID snapshots
 │   └── damm_backup_turso...   # Cloud state backups synchronized from Turso libSQL
 ├── public/
-│   └── damm-logo.png          # Official corporate visual assets
+│   └── damm-logo.png          # Corporate visual assets
 ├── scripts/
 │   ├── backup_db.py           # CLI daemon for atomic hot-backups (local & cloud)
 │   └── importar_dades.py      # Database seeding & historical telemetry ingestion utility
@@ -228,14 +177,14 @@ damm-industrial-analytics/
 
 ---
 
-## 🔌 Complete REST API Reference
+## Complete REST API Reference
 
 | Method | Endpoint | Security / Scope | Technical Description |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/health` | Public / Monitoring | Returns active DB engine (`turso` vs `sqlite`), AI provider readiness, and $k$-anonymity threshold. |
+| `GET` | `/api/health` | Public / Monitoring | Returns active DB engine (`turso` vs `sqlite`), AI provider readiness, and k-anonymity threshold. |
 | `GET` | `/api/dashboard` | HR Admin | Computes global KPIs, response velocity, eNPS, monthly participation trends, and proactive AI alerts. |
 | `GET` | `/api/surveys` | HR Admin | Lists all active, draft, and historical surveys with real-time response counters. |
-| `GET` | `/api/surveys/{id}/detail` | HR Admin ($k \ge 5$) | Returns per-question score distributions and sanitized comments. Enforces statistical $k$-anonymity lock. |
+| `GET` | `/api/surveys/{id}/detail` | HR Admin ($k \ge 5$) | Returns per-question score distributions and sanitized comments. Enforces statistical k-anonymity lock. |
 | `POST` | `/api/enquestes` | HR Admin (HITL) | Commits a newly created or AI-assisted survey schema into relational storage. |
 | `GET` | `/api/verificar/metode/{token}` | Zero-Trust Gateway | Resolves QR token metadata and dictates required auth flow (`xarxa` CIDR vs `m365` SSO). |
 | `POST` | `/api/verificar/xarxa` | Zero-Trust Gateway | Validates client IP against industrial CIDR ranges and issues a 256-bit one-time token. |
@@ -250,7 +199,7 @@ damm-industrial-analytics/
 
 ---
 
-## 🚀 Local Deployment & Quickstart
+## Local Deployment & Quickstart
 
 ### Prerequisites
 * **Python** `3.10+`
@@ -263,7 +212,7 @@ cd damm-industrial-analytics
 cp .env.example .env
 ```
 
-Edit `.env` with your credentials (note: the entire platform runs 100% offline using local SQLite and the deterministic AI engine even if cloud keys are left blank):
+Edit `.env` with your credentials (the platform runs 100% offline using local SQLite and the deterministic AI engine if cloud keys are omitted):
 ```env
 # Hybrid Database (Turso Cloud + Local SQLite Failover)
 TURSO_DATABASE_URL=libsql://your-cluster.turso.io
@@ -303,8 +252,7 @@ python scripts/backup_db.py
 
 ---
 
-## 👨‍💻 Author
+## Author
 
 **Blai Bofill Butinyà**  
-*Data Engineering Student at Universitat Autònoma de Barcelona (UAB)*  
-Focused on high-performance data systems, distributed architectures, backend engineering, and applied AI.
+Data Engineering Student at Universitat Autònoma de Barcelona (UAB)
